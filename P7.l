@@ -44,7 +44,3 @@ table_col               \{|c|[c|]*\}
 {newtext}                { yylval.str = strdup(yytext); return PLAIN_TEXT; }
 
 %%
-
-int yywrap(void) {
-    return 1;
-}

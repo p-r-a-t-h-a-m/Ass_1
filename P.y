@@ -17,12 +17,12 @@ void yyerror(char *s);
     struct Node *node; // For AST nodes
 }
  
-%token SUBSECTION SUBSUBSECTION BOLD ITALIC HRULE PARAGRAPH STRT_CODE_BLOCK END_CODE_BLOCK LINK IMAGE STRT_TABLE TABLE_COL END_TABLE 
-%token STRT_ITEMIZE END_ITEMIZE STRT_ENUMERATE END_ENUMERATE ITEM SECTION 
-%token CURLYOPEN CURLYCLOSE NEWLINE BEGINDOC ENDDOC
+%token SUBSECTION SUBSUBSECTION BOLD ITALIC MONOSPACE HRULE PARAGRAPH STRT_CODE_BLOCK END_CODE_BLOCK LINK IMAGE /*STRT_TABLE TABLE_COL END_TABLE ROW_STRT ROW_END*/
+%token STRT_ITEMIZE END_ITEMIZE STRT_ENUMERATE END_ENUMERATE ITEM SECTION /*STRT_TABULAR END_TABULAR*/
+%token CURLYOPEN CURLYCLOSE NEWLINE BEGINDOC ENDDOC /*SEPARATOR*/
 
 %token <str> PLAIN_TEXT URL
-%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image whitespace plain_text 
+%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image /*table column_spec row rows column columns*/ whitespace plain_text 
 
 %%
 program: BEGINDOC documents ENDDOC {
@@ -53,7 +53,7 @@ document    : block { $$ = $1; }
             ;
 
 block:
-    heading    | formatting    | list    | code_block    | href    | image    /* | table */    | plain_text
+    heading    | formatting    | list    | code_block    | href    | image    | plain_text
     ;
 
 whitespace : NEWLINE NEWLINE whitespace {$$ = create_node_with_type("whitespace", "multinewline", "", $3, NULL);}
@@ -88,6 +88,12 @@ formatting  : BOLD CURLYOPEN documents CURLYCLOSE
             | ITALIC CURLYOPEN documents CURLYCLOSE
             {
                 $$ = create_node_with_type("italic", "italic", "", $3, NULL); 
+            }
+            ;
+
+            | MONOSPACE CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("mono", "mono", "", $3, NULL);
             }
             ;
 
@@ -141,12 +147,67 @@ ol_list_items   :
         }
         ;
 
-  /* table:
+/* table:
         STRT_TABLE TABLE_COL plain_text END_TABLE
         {
             $$ = create_node_with_type("table", 0, "", $3,NULL);
         }
         ;   */
+/* table:
+    STRT_TABLE STRT_TABULAR column_spec rows END_TABULAR END_TABLE
+    {
+        $$ = create_node_with_type("table", "complete", "", $3, $4);
+        printf("%s", markdownCode($$));
+        free_ast($$);
+    }
+    ;
+
+column_spec:
+    /* Matches column specification inside \begin{tabular}{} */
+    /* For example, |c|c| 
+    PLAIN_TEXT
+    {
+        $$ = create_node_with_type("column_spec", "spec", 0, $1, NULL);
+    }
+    ;
+
+rows:
+    row rows
+    {
+        $$ = create_node_with_type("rows", "recursion", "", $1, $2);
+    }
+    | %empty
+    {
+        $$ = NULL;
+    }
+    ;
+
+row:
+    ROW_STRT columns ROW_END
+    {
+        $$ = create_node_with_type("row", "complete", "", $2, NULL);
+    }
+    ;
+
+columns:
+    column SEPARATOR columns
+    {
+        $$ = create_node_with_type("columns", "recursion", "", $1, $3);
+    }
+    | column
+    {
+        $$ = create_node_with_type("columns", "single", "", $1, NULL);
+    }
+    ;
+
+column:
+    PLAIN_TEXT
+    {
+        $$ = create_node_with_type("column", "data",0,  $1, NULL);
+    }
+    ; */
+
+
 
 href    :
         LINK CURLYOPEN URL CURLYCLOSE CURLYOPEN documents CURLYCLOSE

@@ -21,6 +21,7 @@ table_col               \{|c|[c|]*\}
 \\subsubsection          { return SUBSUBSECTION; }
 \\textbf                 { yylval.str = strdup(yytext); return BOLD; }
 \\textit                 { yylval.str = strdup(yytext); return ITALIC; }
+\\texttt                 { return MONOSPACE; }
 \\hrule                  { return HRULE; }
 \\par                    { return PARAGRAPH; }
 \\begin\{verbatim\}      { return STRT_CODE_BLOCK; }
@@ -32,15 +33,12 @@ table_col               \{|c|[c|]*\}
 \\end\{itemize\}         { return END_ITEMIZE; }
 \\begin\{enumerate\}     { return STRT_ENUMERATE; }
 \\end\{enumerate\}       { return END_ENUMERATE; }
-\\begin\{table\}         { return STRT_TABLE; }
-\\end\{table\}           { return END_TABLE; }
 \{                       { return CURLYOPEN; }
 \}                       { return CURLYCLOSE; }
 {newline}                { return NEWLINE; }
 \\begin\{document\}      { return BEGINDOC; }
 \\end\{document\}        { return ENDDOC; }
 "    \\item "            { return ITEM; }
-{table_col}              { return TABLE_COL; }
 {newtext}                { yylval.str = strdup(yytext); return PLAIN_TEXT; }
 [ \n\t\r]                ;
 %%

@@ -16,19 +16,19 @@ void yyerror(char *s);
     char *str;  // For plain text and other strings
     struct Node *node; // For AST nodes
 }
-
-%token SUBSECTION SUBSUBSECTION BOLD ITALIC HLINE PAR CODE_BEGIN CODE_END HREF IMAGE TABLE_BEGIN TABLE_COL TABLE_END 
-%token ITEMIZE_BEGIN ITEMIZE_END ENUMERATE_BEGIN ENUMERATE_END ITEMELE SECTION 
-%token BEGINBRACE ENDBRACE NEWLINE BEGINDOC ENDDOC
+ 
+%token SUBSECTION SUBSUBSECTION BOLD ITALIC HRULE PARAGRAPH STRT_CODE_BLOCK END_CODE_BLOCK LINK IMAGE STRT_TABLE TABLE_COL END_TABLE 
+%token STRT_ITEMIZE END_ITEMIZE STRT_ENUMERATE END_ENUMERATE ITEM SECTION 
+%token CURLYOPEN CURLYCLOSE NEWLINE BEGINDOC ENDDOC
 
 %token <str> PLAIN_TEXT URL
-%type <node> program documents document doc section subsection subsubsection bold italic par hline code_block href list ul_list_items ol_list_items image whitespace plain_text 
+%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image whitespace plain_text 
 
 %%
 program: BEGINDOC documents ENDDOC {
                 struct Node* ParseTree;
                 // printf("AST Construction begun\n");
-				ParseTree = create_node_with_type("program", "begin", "", $2, NULL, NULL);
+				ParseTree = create_node_with_type("program", "begin", "", $2, NULL);
                 print_ast(ParseTree);
                 printf("%s", markdownCode(ParseTree));
                 // free_ast(ParseTree);
@@ -36,165 +36,138 @@ program: BEGINDOC documents ENDDOC {
                 }
         ;
 
-
-/* documents : document whitespace documents 
-            { 
-                $$ = create_node_with_type("documents", "recursion", "", $1, $2, $3);
-            }
-          | %empty {$$ = create_node_with_type("documents", "empty", "", NULL, NULL, NULL);}
-          ; */
-
-
 documents : document doc 
             { 
-                $$ = create_node_with_type("documents", "recursion", "", $1, $2, NULL);
+                $$ = create_node_with_type("documents", "recursion", "", $1, $2);
             }
 
-doc: whitespace documents
+doc       : whitespace documents
             { 
-                $$ = create_node_with_type("doc", "recursion", "", $1, $2, NULL);
+                $$ = create_node_with_type("doc", "recursion", "", $1, $2);
             }
-        | whitespace 
-        {
-            $$ = create_node_with_type("doc", "whitespace", "", NULL, NULL, NULL);
-        }
+            | whitespace 
+            {
+                $$ = create_node_with_type("doc", "whitespace", "", NULL, NULL);
+            }
+document    : block { $$ = $1; }
+            ;
 
-document:  section {$$=$1;} 
-        |  subsection {$$=$1;}
-        |  subsubsection  {$$=$1;}
-        |  bold {$$=$1;}
-        |  italic {$$=$1;}
-        |  par {$$=$1;}
-        |  hline {$$=$1;}
-        |  code_block {$$=$1;}
-        |  list {$$=$1;}
-        |  href {$$=$1;} 
-        |  image {$$=$1;}
-        |  plain_text {$$=$1;}
-        ;
-        /* |  table {$$=create_node_with_type("subsection parent",1,"",$1,NULL,NULL);}  */
+block:
+    heading    | formatting    | list    | code_block    | href    | image    /* | table */    | plain_text
+    ;
 
-
-whitespace : NEWLINE NEWLINE whitespace {$$ = create_node_with_type("whitespace", "multinewline", "", $3, NULL, NULL);}
-           | NEWLINE {$$ = create_node_with_type("whitespace", "newline", "", NULL, NULL, NULL);} 
-           | %empty {$$ = create_node_with_type("whitespace", "empty", "", NULL, NULL, NULL);}
+whitespace : NEWLINE NEWLINE whitespace {$$ = create_node_with_type("whitespace", "multinewline", "", $3, NULL);}
+           | NEWLINE {$$ = create_node_with_type("whitespace", "newline", "", NULL, NULL);} 
+           | %empty {$$ = create_node_with_type("whitespace", "empty", "", NULL, NULL);}
            ;
 
-section:
-        SECTION BEGINBRACE documents ENDBRACE
-        {
-            $$ = create_node_with_type("section", "heading1", "", $3, NULL, NULL);
-        }
-        ;
+heading    : SECTION CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("section", "heading1", "", $3, NULL);
+            }
+            ;
 
-subsection:
-        SUBSECTION BEGINBRACE documents ENDBRACE
-        {
-            $$ = create_node_with_type("subsection", "heading2", "", $3, NULL, NULL);
-        }
-        ;
+            | SUBSECTION CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("subsection", "heading2", "", $3, NULL);
+            }
+            ;
 
-subsubsection:
-        SUBSUBSECTION BEGINBRACE documents ENDBRACE
-        {
-            $$ = create_node_with_type("subsubsection", "heading3", "", $3, NULL, NULL);
-        }
-        ;
+            | SUBSUBSECTION CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("subsubsection", "heading3", "", $3, NULL);
+            }
+            ;
 
-bold:
-        BOLD BEGINBRACE documents ENDBRACE
-        {
-            $$ = create_node_with_type("bold", "bold", "", $3, NULL, NULL);
-        }
-        ;
+formatting  : BOLD CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("bold", "bold", "", $3, NULL);
+            }
+            ;
+            
+            | ITALIC CURLYOPEN documents CURLYCLOSE
+            {
+                $$ = create_node_with_type("italic", "italic", "", $3, NULL); 
+            }
+            ;
 
-italic:
-        ITALIC BEGINBRACE documents ENDBRACE
-        {
-            $$ = create_node_with_type("italic", "italic", "", $3, NULL, NULL); 
-        }
-        ;
+            | PARAGRAPH
+            {
+                $$ = create_node_with_type("paragraph", "paragraph", "", NULL, NULL);
+            }
+            ;
 
-par:
-        PAR
-        {
-            $$ = create_node_with_type("para", "para", "", NULL, NULL, NULL);
-        }
-        ;
+            | HRULE
+            {
+                $$ = create_node_with_type("hrule", "hrule", "", NULL, NULL);
+            }
+            ;
 
-hline:
-        HLINE
-        {
-            $$ = create_node_with_type("hrule", "hrule", "", NULL, NULL, NULL);
-        }
-        ;
+code_block : STRT_CODE_BLOCK documents END_CODE_BLOCK
+            {
+                $$ = create_node_with_type("code_block", "code_block", "", $2,NULL);
+            }
+            ;
 
-code_block:
-        CODE_BEGIN documents CODE_END
+list    : 
+        STRT_ITEMIZE ul_list_items END_ITEMIZE
         {
-            $$ = create_node_with_type("code_block", "code_block", "", $2,NULL,NULL);
+            $$ = create_node_with_type("list", "itemize", "", $2,NULL);
+        }
+        | STRT_ENUMERATE ol_list_items END_ENUMERATE
+        {
+            $$ = create_node_with_type("list", "enumerate", "", $2,NULL);
         }
         ;
-
-list: 
-        ITEMIZE_BEGIN ul_list_items ITEMIZE_END
+ul_list_items   :
+        ITEM document
         {
-            $$ = create_node_with_type("list", "itemize", "", $2,NULL,NULL);
-        }
-        | ENUMERATE_BEGIN ol_list_items ENUMERATE_END
-        {
-            $$ = create_node_with_type("list", "enumerate", "", $2,NULL,NULL);
-        }
-        ;
-ul_list_items:
-        ITEMELE document
-        {
-            $$ = create_node_with_type("ULlist_items", "list_item", "", $2,NULL,NULL);
+            $$ = create_node_with_type("ULlist_items", "list_item", "", $2,NULL);
         } 
-        | ITEMELE document ul_list_items
+        | ITEM document ul_list_items
         {
-            $$ = create_node_with_type("ULlist_items", "list_item_recursion", "", $2,$3,NULL);
+            $$ = create_node_with_type("ULlist_items", "list_item_recursion", "", $2,$3);
         }
         ;
 
-ol_list_items:
-        ITEMELE document
+ol_list_items   :
+        ITEM document
         {
-            $$ = create_node_with_type("OLlist_items", "list_item", "", $2,NULL,NULL);
+            $$ = create_node_with_type("OLlist_items", "list_item", "", $2,NULL);
         } 
-        | ITEMELE document ol_list_items
+        | ITEM document ol_list_items
         {
-            $$ = create_node_with_type("OLlist_items", "list_item_recursion", "", $2,$3,NULL);
+            $$ = create_node_with_type("OLlist_items", "list_item_recursion", "", $2,$3);
         }
         ;
 
   /* table:
-        TABLE_BEGIN TABLE_COL plain_text TABLE_END
+        STRT_TABLE TABLE_COL plain_text END_TABLE
         {
-            $$ = create_node_with_type("table", 0, "", $3,NULL,NULL);
+            $$ = create_node_with_type("table", 0, "", $3,NULL);
         }
         ;   */
 
-href:
-        HREF BEGINBRACE URL ENDBRACE BEGINBRACE documents ENDBRACE
+href    :
+        LINK CURLYOPEN URL CURLYCLOSE CURLYOPEN documents CURLYCLOSE
         {
-            $$ = create_node_with_type("href", "link", $3,$6,NULL,NULL);
+            $$ = create_node_with_type("href", "link", $3,$6,NULL);
         }
         ; 
 
-image:
-        IMAGE BEGINBRACE documents ENDBRACE
+image   :
+        IMAGE CURLYOPEN document CURLYCLOSE
         {
-            $$ = create_node_with_type("image", "image", "",$3,NULL,NULL);
+            $$ = create_node_with_type("image", "image", "",$3,NULL);
         }
         ;
 
-plain_text:
-        PLAIN_TEXT
-        {
-            $$ = create_node_with_type("plain_text", "text", $1, NULL, NULL, NULL);
-        }
-        ;
+plain_text  :
+            PLAIN_TEXT
+            {
+                $$ = create_node_with_type("plain_text", "text", $1, NULL, NULL);
+            }
+            ;
 %%
 
 void yyerror(char *s) {

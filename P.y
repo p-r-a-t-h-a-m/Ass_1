@@ -23,7 +23,7 @@ void yyerror(char *s);
 %token TOKCURLYOPEN TOKCURLYCLOSE TOKNEWLINE TOKBEGINDOC TOKENDDOC TOK_STRT_QOUTE TOK_END_QOUTE/*SEPARATOR*/
 
 %token <str> TOKPLAIN_TEXT TOKURL
-%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image /*table column_spec row rows column columns */whitespace plain_text 
+%type <node> program documents document doc block heading formatting code_block href list unordered_list ordered_list image /*table column_spec row rows column columns */ whitespace plain_text 
 
 %%
 program: TOKBEGINDOC documents TOKENDDOC {
@@ -110,43 +110,36 @@ code_block : TOKSTRT_CODE_BLOCK documents TOKEND_CODE_BLOCK
             ;
 
 list    : 
-        TOKSTRT_ITEMIZE ul_list_items TOKEND_ITEMIZE
+        TOKSTRT_ITEMIZE unordered_list TOKEND_ITEMIZE
         {
             $$ = create_node_with_type(LIST, "itemize", "", $2,NULL);
         }
-        | TOKSTRT_ENUMERATE ol_list_items TOKEND_ENUMERATE
+        | TOKSTRT_ENUMERATE ordered_list TOKEND_ENUMERATE
         {
             $$ = create_node_with_type(LIST, "enumerate", "", $2,NULL);
         }
         ;
-ul_list_items   :
+unordered_list   :
         TOKITEM document
         {
-            $$ = create_node_with_type(UL_LIST_ITEMS, "list_item", "", $2,NULL);
+            $$ = create_node_with_type(ULIST_ITEMS, "list_item", "", $2,NULL);
         } 
-        | TOKITEM document ul_list_items
+        | TOKITEM document unordered_list
         {
-            $$ = create_node_with_type(UL_LIST_ITEMS, "list_item_recursion", "", $2,$3);
+            $$ = create_node_with_type(ULIST_ITEMS, "item_recursion", "", $2,$3);
         }
         ;
 
-ol_list_items   :
+ordered_list   :
         TOKITEM document
         {
-            $$ = create_node_with_type(OL_LIST_ITEMS, "list_item", "", $2,NULL);
+            $$ = create_node_with_type(OLIST_ITEMS, "list_item", "", $2,NULL);
         } 
-        | TOKITEM document ol_list_items
+        | TOKITEM document ordered_list
         {
-            $$ = create_node_with_type(OL_LIST_ITEMS, "list_item_recursion", "", $2,$3);
+            $$ = create_node_with_type(OLIST_ITEMS, "item_recursion", "", $2,$3);
         }
         ;
-
-/* table:
-        STRT_TABLE TABLE_COL plain_text END_TABLE
-        {
-            $$ = create_node_with_type("table", 0, "", $3,NULL);
-        }
-        ;   */
 /* table:
     STRT_TABLE STRT_TABULAR column_spec rows END_TABULAR END_TABLE
     {

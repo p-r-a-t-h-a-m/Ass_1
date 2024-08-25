@@ -10,7 +10,7 @@ typedef struct treeNode *ParseTree;
 struct treeNode* create_node_with_type(int case_identifier, char *type, char *text, struct treeNode *first, struct treeNode *second) {
     struct treeNode *treenode = (struct treeNode *)malloc(sizeof(struct treeNode));
     treenode->treeNodeId = case_identifier;
-    treenode->treeNodetype = type; // type will be determined by case_identifier if needed
+    treenode->treeNodetype = type;
     treenode->content = text;
     treenode->child1 = first;
     treenode->child2 = second;
@@ -108,35 +108,35 @@ char* markdownCode(struct treeNode *T) {
                 sprintf(code, "*%s*", t1);
             }
             break;
-        case MONO:
+        case MONO:              // Handle MONOSPACE Node
             if (T->treeNodetype == "mono"){
                 t1 = markdownCode(T->child1);
                 sprintf(code, "`%s`", t1);
             }
             break;
-        case HRULE:
+        case HRULE:            // Handle HRULE Node
             if (T->treeNodetype == "hrule")
                 sprintf(code, "\n---\n");
             break;
-        case HREF:
+        case HREF:          // Handle HREF Node
             if (T->treeNodetype == "href"){
                 t1 = markdownCode(T->child1);
                 sprintf(code, "[%s](%s)", t1, T->content);
             }
             break;
-        case IMAGE:
+        case IMAGE:      // Handle IMAGE Node
             if (T->treeNodetype == "image"){
                 t1 = markdownCode(T->child1);
                 sprintf(code, "![random_image](%s)\n", t1);
             }
             break;
-        case CODE_BLOCK:
+        case CODE_BLOCK:        // Handle CODE BLOCK Node
             if (T->treeNodetype == "code_block"){
                 t1 = markdownCode(T->child1);
                 sprintf(code, "\n```\n%s\n```\n", t1);
             }
             break;
-        case QUOTE_BLOCK:
+        case QUOTE_BLOCK:     // Handle QUOTE BLOCK Node
             if (T->treeNodetype == "qoute"){
                 t1 = markdownCode(T->child1);
                 sprintf(code, ">%s\n", t1);
@@ -152,23 +152,23 @@ char* markdownCode(struct treeNode *T) {
             t1 = markdownCode(T->child1);
             sprintf(code, "%s", t1);
             break;
-        case UL_LIST_ITEMS:
+        case ULIST_ITEMS:
             if (T->treeNodetype == "list_item") {
                 t1 = markdownCode(T->child1);
                 sprintf(code, "- %s\n", t1);
-            } else if (T->treeNodetype == "list_item_recursion") {
+            } else if (T->treeNodetype == "item_recursion") {
                 t1 = markdownCode(T->child1);
                 t2 = markdownCode(T->child2);
                 sprintf(code, "- %s\n%s", t1, t2);
             }
             break;
-        case OL_LIST_ITEMS:
+        case OLIST_ITEMS:
             if (T->treeNodetype == "list_item") {
                 int count = GLOBAL_COUNTER;
                 GLOBAL_COUNTER += 1;
                 t1 = markdownCode(T->child1);
                 sprintf(code, "%d. %s\n", count, t1);
-            } else if (T->treeNodetype == "list_item_recursion") {
+            } else if (T->treeNodetype == "item_recursion") {
                 int count = GLOBAL_COUNTER;
                 GLOBAL_COUNTER += 1;
                 t1 = markdownCode(T->child1);
@@ -176,12 +176,6 @@ char* markdownCode(struct treeNode *T) {
                 sprintf(code, "%d. %s\n%s", count, t1, t2);
             }
             break;
-        // default:
-        //     sprintf(code, "Unknown node type: %d", T->treeNodeId);
-        //     break;
     }
-
-    // free(t1);
-    // free(t2);
     return code;
 }

@@ -33,6 +33,8 @@ table_col               \{|c|[c|]*\}
 \\end\{itemize\}         { return TOKEND_ITEMIZE; }
 \\begin\{enumerate\}     { return TOKSTRT_ENUMERATE; }
 \\end\{enumerate\}       { return TOKEND_ENUMERATE; }
+\\begin\{quote\}         { return TOK_STRT_QOUTE; }
+\\end\{quote\}           { return TOK_END_QOUTE; }
 \{                       { return TOKCURLYOPEN; }
 \}                       { return TOKCURLYCLOSE; }
 {newline}                { return TOKNEWLINE; }

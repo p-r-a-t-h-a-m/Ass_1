@@ -51,7 +51,3 @@ Module.symvers
 Mkfile.old
 dkms.conf
 *.yy.c
-*.c
-*.md
-*.h
-*.tex

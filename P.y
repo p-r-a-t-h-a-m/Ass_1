@@ -17,14 +17,10 @@ void yyerror(char *s);
     struct treeNode *node; // For AST nodes
 }
 
-/* char *TreeNodeName[] = {  
-    "program", "documents", "doc", "section", "subsection", "subsubsection", "whitespace", "plain_text", "bold", "italic",
-    "mono", "hrule", "href", "image", "code_block", "list", "ul_list_items", "ol_list_items", "unknown"
-}; */
 
 %token TOKSECTION TOKSUBSECTION TOKSUBSUBSECTION TOKBOLD TOKITALIC TOKMONOSPACE TOKHRULE TOKPARAGRAPH TOKSTRT_CODE_BLOCK TOKEND_CODE_BLOCK TOKLINK TOKIMAGE /*STRT_TABLE TABLE_COL END_TABLE ROW_STRT ROW_END*/
 %token TOKSTRT_ITEMIZE TOKEND_ITEMIZE TOKSTRT_ENUMERATE TOKEND_ENUMERATE TOKITEM /*STRT_TABULAR END_TABULAR*/
-%token TOKCURLYOPEN TOKCURLYCLOSE TOKNEWLINE TOKBEGINDOC TOKENDDOC /*SEPARATOR*/
+%token TOKCURLYOPEN TOKCURLYCLOSE TOKNEWLINE TOKBEGINDOC TOKENDDOC TOK_STRT_QOUTE TOK_END_QOUTE/*SEPARATOR*/
 
 %token <str> TOKPLAIN_TEXT TOKURL
 %type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image /*table column_spec row rows column columns */whitespace plain_text 
@@ -92,6 +88,10 @@ formatting  : TOKBOLD TOKCURLYOPEN documents TOKCURLYCLOSE
             | TOKMONOSPACE TOKCURLYOPEN documents TOKCURLYCLOSE
             {
                 $$ = create_node_with_type(MONO, "mono", "", $3, NULL);
+            }
+            | TOK_STRT_QOUTE documents TOK_END_QOUTE
+            {
+                $$ = create_node_with_type(QUOTE_BLOCK, "qoute", "", $2, NULL);
             }
             | TOKPARAGRAPH
             {

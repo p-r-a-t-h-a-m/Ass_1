@@ -14,22 +14,27 @@ void yyerror(char *s);
 
 %union {
     char *str;  // For plain text and other strings
-    struct Node *node; // For AST nodes
+    struct treeNode *node; // For AST nodes
 }
- 
-%token SUBSECTION SUBSUBSECTION BOLD ITALIC MONOSPACE HRULE PARAGRAPH STRT_CODE_BLOCK END_CODE_BLOCK LINK IMAGE /*STRT_TABLE TABLE_COL END_TABLE ROW_STRT ROW_END*/
-%token STRT_ITEMIZE END_ITEMIZE STRT_ENUMERATE END_ENUMERATE ITEM SECTION /*STRT_TABULAR END_TABULAR*/
-%token CURLYOPEN CURLYCLOSE NEWLINE BEGINDOC ENDDOC /*SEPARATOR*/
 
-%token <str> PLAIN_TEXT URL
-%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image /*table column_spec row rows column columns*/ whitespace plain_text 
+/* char *TreeNodeName[] = {  
+    "program", "documents", "doc", "section", "subsection", "subsubsection", "whitespace", "plain_text", "bold", "italic",
+    "mono", "hrule", "href", "image", "code_block", "list", "ul_list_items", "ol_list_items", "unknown"
+}; */
+
+%token TOKSECTION TOKSUBSECTION TOKSUBSUBSECTION TOKBOLD TOKITALIC TOKMONOSPACE TOKHRULE TOKPARAGRAPH TOKSTRT_CODE_BLOCK TOKEND_CODE_BLOCK TOKLINK TOKIMAGE /*STRT_TABLE TABLE_COL END_TABLE ROW_STRT ROW_END*/
+%token TOKSTRT_ITEMIZE TOKEND_ITEMIZE TOKSTRT_ENUMERATE TOKEND_ENUMERATE TOKITEM /*STRT_TABULAR END_TABULAR*/
+%token TOKCURLYOPEN TOKCURLYCLOSE TOKNEWLINE TOKBEGINDOC TOKENDDOC /*SEPARATOR*/
+
+%token <str> TOKPLAIN_TEXT TOKURL
+%type <node> program documents document doc block heading formatting code_block href list ul_list_items ol_list_items image /*table column_spec row rows column columns */whitespace plain_text 
 
 %%
-program: BEGINDOC documents ENDDOC {
-                struct Node* ParseTree;
+program: TOKBEGINDOC documents TOKENDDOC {
+                struct treeNode* ParseTree;
                 // printf("AST Construction begun\n");
-				ParseTree = create_node_with_type("program", "begin", "", $2, NULL);
-                print_ast(ParseTree);
+				ParseTree = create_node_with_type(PROGRAM, "begin", "", $2, NULL);
+                // print_ast(ParseTree);
                 printf("%s", markdownCode(ParseTree));
                 // free_ast(ParseTree);
                 // printf("AST construction finished\n");
@@ -38,112 +43,101 @@ program: BEGINDOC documents ENDDOC {
 
 documents : document doc 
             { 
-                $$ = create_node_with_type("documents", "recursion", "", $1, $2);
+                $$ = create_node_with_type(DOCUMENTS, "recursion", "", $1, $2);
             }
 
 doc       : whitespace documents
             { 
-                $$ = create_node_with_type("doc", "recursion", "", $1, $2);
+                $$ = create_node_with_type(DOC, "recursion", "", $1, $2);
             }
             | whitespace 
             {
-                $$ = create_node_with_type("doc", "whitespace", "", NULL, NULL);
+                $$ = create_node_with_type(DOC, "whitespace", "", NULL, NULL);
             }
 document    : block { $$ = $1; }
             ;
 
 block:
-    heading    | formatting    | list    | code_block    | href    | image    | plain_text
+    heading    | formatting    | list    | code_block    | href    | image  /*| table*/    | plain_text
     ;
 
-whitespace : NEWLINE NEWLINE whitespace {$$ = create_node_with_type("whitespace", "multinewline", "", $3, NULL);}
-           | NEWLINE {$$ = create_node_with_type("whitespace", "newline", "", NULL, NULL);} 
-           | %empty {$$ = create_node_with_type("whitespace", "empty", "", NULL, NULL);}
+whitespace : TOKNEWLINE TOKNEWLINE whitespace {$$ = create_node_with_type(WHITESPACE, "paragraph", "", $3, NULL);}
+           | TOKNEWLINE {$$ = create_node_with_type(WHITESPACE, "newline", "", NULL, NULL);} 
+           | %empty {$$ = create_node_with_type(WHITESPACE, "empty", "", NULL, NULL);}
            ;
 
-heading    : SECTION CURLYOPEN documents CURLYCLOSE
+heading    : TOKSECTION TOKCURLYOPEN documents TOKCURLYCLOSE
             {
-                $$ = create_node_with_type("section", "heading1", "", $3, NULL);
+                $$ = create_node_with_type(SECTION, "heading1", "", $3, NULL);
+            }
+            | TOKSUBSECTION TOKCURLYOPEN documents TOKCURLYCLOSE
+            {
+                $$ = create_node_with_type(SUBSECTION, "heading2", "", $3, NULL);
+            }
+
+            | TOKSUBSUBSECTION TOKCURLYOPEN documents TOKCURLYCLOSE
+            {
+                $$ = create_node_with_type(SUBSUBSECTION, "heading3", "", $3, NULL);
             }
             ;
 
-            | SUBSECTION CURLYOPEN documents CURLYCLOSE
+formatting  : TOKBOLD TOKCURLYOPEN documents TOKCURLYCLOSE
             {
-                $$ = create_node_with_type("subsection", "heading2", "", $3, NULL);
+                $$ = create_node_with_type(BOLD, "bold", "", $3, NULL);
+            }
+            | TOKITALIC TOKCURLYOPEN documents TOKCURLYCLOSE
+            {
+                $$ = create_node_with_type(ITALIC, "italic", "", $3, NULL); 
+            }
+            | TOKMONOSPACE TOKCURLYOPEN documents TOKCURLYCLOSE
+            {
+                $$ = create_node_with_type(MONO, "mono", "", $3, NULL);
+            }
+            | TOKPARAGRAPH
+            {
+                $$ = create_node_with_type(PARAGRAPH, "paragraph", "", NULL, NULL);
+            }
+            | TOKHRULE
+            {
+                $$ = create_node_with_type(HRULE, "hrule", "", NULL, NULL);
             }
             ;
 
-            | SUBSUBSECTION CURLYOPEN documents CURLYCLOSE
+code_block : TOKSTRT_CODE_BLOCK documents TOKEND_CODE_BLOCK
             {
-                $$ = create_node_with_type("subsubsection", "heading3", "", $3, NULL);
-            }
-            ;
-
-formatting  : BOLD CURLYOPEN documents CURLYCLOSE
-            {
-                $$ = create_node_with_type("bold", "bold", "", $3, NULL);
-            }
-            ;
-            
-            | ITALIC CURLYOPEN documents CURLYCLOSE
-            {
-                $$ = create_node_with_type("italic", "italic", "", $3, NULL); 
-            }
-            ;
-
-            | MONOSPACE CURLYOPEN documents CURLYCLOSE
-            {
-                $$ = create_node_with_type("mono", "mono", "", $3, NULL);
-            }
-            ;
-
-            | PARAGRAPH
-            {
-                $$ = create_node_with_type("paragraph", "paragraph", "", NULL, NULL);
-            }
-            ;
-
-            | HRULE
-            {
-                $$ = create_node_with_type("hrule", "hrule", "", NULL, NULL);
-            }
-            ;
-
-code_block : STRT_CODE_BLOCK documents END_CODE_BLOCK
-            {
-                $$ = create_node_with_type("code_block", "code_block", "", $2,NULL);
+                $$ = create_node_with_type(CODE_BLOCK, "code_block", "", $2,NULL);
             }
             ;
 
 list    : 
-        STRT_ITEMIZE ul_list_items END_ITEMIZE
+        TOKSTRT_ITEMIZE ul_list_items TOKEND_ITEMIZE
         {
-            $$ = create_node_with_type("list", "itemize", "", $2,NULL);
+            $$ = create_node_with_type(LIST, "itemize", "", $2,NULL);
         }
-        | STRT_ENUMERATE ol_list_items END_ENUMERATE
+        | TOKSTRT_ENUMERATE ol_list_items TOKEND_ENUMERATE
         {
-            $$ = create_node_with_type("list", "enumerate", "", $2,NULL);
+            $$ = create_node_with_type(LIST, "enumerate", "", $2,NULL);
         }
         ;
 ul_list_items   :
-        ITEM document
+        TOKITEM document
         {
-            $$ = create_node_with_type("ULlist_items", "list_item", "", $2,NULL);
+            $$ = create_node_with_type(UL_LIST_ITEMS, "list_item", "", $2,NULL);
         } 
-        | ITEM document ul_list_items
+        | TOKITEM document ul_list_items
         {
-            $$ = create_node_with_type("ULlist_items", "list_item_recursion", "", $2,$3);
+            $$ = create_node_with_type(UL_LIST_ITEMS, "list_item_recursion", "", $2,$3);
         }
         ;
 
 ol_list_items   :
-        ITEM document
+        TOKITEM document
         {
-            $$ = create_node_with_type("OLlist_items", "list_item", "", $2,NULL);
+            $$ = create_node_with_type(OL_LIST_ITEMS, "list_item", "", $2,NULL);
         } 
-        | ITEM document ol_list_items
+        | TOKITEM document ol_list_items
         {
-            $$ = create_node_with_type("OLlist_items", "list_item_recursion", "", $2,$3);
+            $$ = create_node_with_type(OL_LIST_ITEMS, "list_item_recursion", "", $2,$3);
         }
         ;
 
@@ -210,23 +204,23 @@ column:
 
 
 href    :
-        LINK CURLYOPEN URL CURLYCLOSE CURLYOPEN documents CURLYCLOSE
+        TOKLINK TOKCURLYOPEN TOKURL TOKCURLYCLOSE TOKCURLYOPEN documents TOKCURLYCLOSE
         {
-            $$ = create_node_with_type("href", "link", $3,$6,NULL);
+            $$ = create_node_with_type(HREF, "link", $3,$6,NULL);
         }
         ; 
 
 image   :
-        IMAGE CURLYOPEN document CURLYCLOSE
+        TOKIMAGE TOKCURLYOPEN document TOKCURLYCLOSE
         {
-            $$ = create_node_with_type("image", "image", "",$3,NULL);
+            $$ = create_node_with_type(IMAGE, "image", "",$3,NULL);
         }
         ;
 
 plain_text  :
-            PLAIN_TEXT
+            TOKPLAIN_TEXT
             {
-                $$ = create_node_with_type("plain_text", "text", $1, NULL, NULL);
+                $$ = create_node_with_type(PLAIN_TEXT, "text", $1, NULL, NULL);
             }
             ;
 %%
